@@ -34,7 +34,7 @@ def get_password_hash(password):
 
 
 
-@app.get("/register")
+@app.get("/api/register")
 async def register(response: Response, username: str, password: str, email: str, role: str):
     if not username in db.keys():
         password_hash = get_password_hash(password)
@@ -51,7 +51,7 @@ async def register(response: Response, username: str, password: str, email: str,
 
 
 
-@app.get("/jwt_login")
+@app.get("/api/jwt_login")
 async def jwt_login(response: Response, username: str, password: str):
     if username in db.keys():
         user = db[username]
@@ -73,7 +73,7 @@ async def jwt_login(response: Response, username: str, password: str):
     return {"token": token}
 
 
-@app.get("/admin-jwt")
+@app.get("/api/admin-jwt")
 async def admin_jwt(token: str):
     if not token:
         raise HTTPException(status_code=401, detail="Missing Cookie")
@@ -93,7 +93,7 @@ async def admin_jwt(token: str):
     raise HTTPException(status_code=403, detail=username)
 
 
-@app.get("/blacklist-jwt")
+@app.get("/api/blacklist-jwt")
 async def blacklist_jwt(token: str):
     blacklist_db.append(token)
     
@@ -103,7 +103,7 @@ database = {
     
 }
 
-@app.get("/session_login")
+@app.get("/api/session_login")
 async def session_login(response: Response, username: str, password: str):
     if username in db.keys():
         user = db[username]
@@ -128,7 +128,7 @@ async def session_login(response: Response, username: str, password: str):
     print(session_id)
     return {"message": "Login successful"}
 
-@app.get("/cookie_login")
+@app.get("/api/cookie_login")
 async def session_login(response: Response, username: str, password: str):
     if username in db.keys():
         user = db[username]
@@ -152,7 +152,7 @@ async def session_login(response: Response, username: str, password: str):
     return {"message": "Login successful"}
 
 
-@app.get("/admin-cookie")
+@app.get("/api/admin-cookie")
 async def admin(user_info: Optional[str] = Cookie(None)):
     if not user_info:
         raise HTTPException(status_code=401, detail="Missing Cookie")
@@ -184,7 +184,7 @@ async def admin(user_info: Optional[str] = Cookie(None)):
 
 
 
-@app.get("/admin-session")
+@app.get("/api/admin-session")
 async def admin(sessionid: Optional[str] = Cookie(None)):
     if not sessionid:
         raise HTTPException(status_code=401, detail="Missing Cookie")
