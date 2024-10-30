@@ -49,6 +49,8 @@ async def register(response: Response, username: str, password: str, email: str,
     return {"message": "Register successful"}
 
 
+
+
 @app.get("/jwt_login")
 async def jwt_login(response: Response, username: str, password: str):
     if username in db.keys():
@@ -97,25 +99,50 @@ async def blacklist_jwt(token: str):
     
     return Response()
 
-
+database = {
+    
+}
 
 @app.get("/session_login")
 async def session_login(response: Response, username: str, password: str):
     if username in db.keys():
         user = db[username]
         role = user["role"]
-        if user["password_hash"] == hash(password):
+        if verify_password(password, user["password_hash"]):
+            # session = f"{username}_{role}"
+            # encoded_data = base64.b64encode(session.encode('utf-8'))
+            # session_b64 = encoded_data.decode('utf-8')
+            # salt = "mamadhacker"
+            # hmac = hashlib.md5(session_b64.encode() + salt.encode())
+            # user_info = session_b64 + "." + str(hmac.hexdigest())
+            session_id = str(uuid.uuid4())
+            session_db[session_id] = {
+                "username": username,
+                "role": user["role"]
+            }
+            response.set_cookie(key="sessionid", value=session_id, httponly=True)
+        else:
+            return {"message": "Login failed"}
+    else:
+        return {"message": "Login failed"}
+    print(session_id)
+    return {"message": "Login successful"}
+
+@app.get("/cookie_login")
+async def session_login(response: Response, username: str, password: str):
+    if username in db.keys():
+        user = db[username]
+        role = user["role"]
+        if verify_password(password, user["password_hash"]):
             session = f"{username}_{role}"
             encoded_data = base64.b64encode(session.encode('utf-8'))
             session_b64 = encoded_data.decode('utf-8')
             salt = "mamadhacker"
             hmac = hashlib.md5(session_b64.encode() + salt.encode())
+            # hmac = hashlib.md5(session_b64.encode())
             user_info = session_b64 + "." + str(hmac.hexdigest())
-            # session_id = str(uuid.uuid4())
-            # session_db[session_id] = {
-            #     "username": username,
-            #     "role": user["role"]
-            # }
+            # user_info = session_b64 
+
             response.set_cookie(key="user_info", value=user_info, httponly=True)
         else:
             return {"message": "Login failed"}
@@ -125,23 +152,17 @@ async def session_login(response: Response, username: str, password: str):
     return {"message": "Login successful"}
 
 
-@app.get("/admin")
+@app.get("/admin-cookie")
 async def admin(user_info: Optional[str] = Cookie(None)):
     if not user_info:
         raise HTTPException(status_code=401, detail="Missing Cookie")
-
-    # if not session_id in session_db.keys():
-    #     raise HTTPException(status_code=403, detail="Invalid Cookie")
-    
-    # session = session_db[session_id]
-
-    # if not session["role"] == "admin":
-    #     raise HTTPException(status_code=403, detail="Forbidden")
     
     try:
         session_b64, session_b64_hash = user_info.split(".")
         salt = "mamadhacker"
         if not hashlib.md5(session_b64.encode() + salt.encode()).hexdigest() == session_b64_hash:
+        # if not hashlib.md5(session_b64.encode()).hexdigest() == session_b64_hash:
+            print("AAAAAAAAAAA")
             raise Exception
     except Exception:
         raise HTTPException(status_code=403, detail="Forbidden") 
@@ -149,6 +170,7 @@ async def admin(user_info: Optional[str] = Cookie(None)):
 
     decoded_data = base64.b64decode(session_b64)
     session = decoded_data.decode('utf-8')
+    print(session)
     s = session.split("_")
     if not len(s) == 2:
         raise HTTPException(status_code=403, detail="Invalid Cookie")
@@ -159,3 +181,21 @@ async def admin(user_info: Optional[str] = Cookie(None)):
         return {"message": f"FLAG_{username}"}
     
     raise HTTPException(status_code=403, detail="Forbidden")
+
+
+
+@app.get("/admin-session")
+async def admin(sessionid: Optional[str] = Cookie(None)):
+    if not sessionid:
+        raise HTTPException(status_code=401, detail="Missing Cookie")
+
+    if not sessionid in session_db.keys():
+        raise HTTPException(status_code=403, detail="Invalid Cookie")
+    
+    session = session_db[sessionid]
+    username = session["username"]
+
+    if not session["role"] == "admin":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    return {"message": f"FLAG_{username}"}
